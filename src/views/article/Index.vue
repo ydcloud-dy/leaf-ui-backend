@@ -157,7 +157,7 @@
         <p>将为选中的 {{ selectedArticles.length }} 篇文章批量更新以下字段（留空则不更新）</p>
       </div>
 
-      <el-form label-width="80px">
+      <el-form label-width="100px">
         <el-form-item label="封面图片">
           <div style="display: flex; gap: 10px">
             <el-input v-model="batchFormData.cover" placeholder="请输入图片URL或选择已有图片" clearable />
@@ -200,6 +200,20 @@
               :value="tag.id"
             />
           </el-select>
+        </el-form-item>
+
+        <el-form-item label="创建时间">
+          <el-date-picker
+            v-model="batchFormData.createdAt"
+            type="datetime"
+            placeholder="选择创建时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            clearable
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            留空则不修改创建时间
+          </div>
         </el-form-item>
       </el-form>
 
@@ -258,7 +272,8 @@ const batchFormData = reactive({
   cover: '',
   categoryId: null,
   chapterId: null,
-  tagIds: []
+  tagIds: [],
+  createdAt: null
 })
 const batchUpdating = ref(false)
 const coverSelectorVisible = ref(false)
@@ -397,7 +412,8 @@ const handleBatchUpdate = async () => {
   const hasUpdate = batchFormData.cover ||
                     batchFormData.categoryId ||
                     batchFormData.chapterId !== null ||
-                    batchFormData.tagIds.length > 0
+                    batchFormData.tagIds.length > 0 ||
+                    batchFormData.createdAt
 
   if (!hasUpdate) {
     ElMessage.warning('请至少填写一个要更新的字段')
@@ -422,6 +438,15 @@ const handleBatchUpdate = async () => {
     if (batchFormData.tagIds.length > 0) {
       payload.tag_ids = batchFormData.tagIds
     }
+    // 添加创建时间处理
+    if (batchFormData.createdAt) {
+      // 转换为 ISO 8601 格式
+      if (batchFormData.createdAt instanceof Date) {
+        payload.created_at = batchFormData.createdAt.toISOString()
+      } else if (typeof batchFormData.createdAt === 'string') {
+        payload.created_at = new Date(batchFormData.createdAt).toISOString()
+      }
+    }
 
     await request.post('/articles/batch-update-fields', payload)
 
@@ -433,6 +458,7 @@ const handleBatchUpdate = async () => {
     batchFormData.categoryId = null
     batchFormData.chapterId = null
     batchFormData.tagIds = []
+    batchFormData.createdAt = null
 
     selectedArticles.value = []
     fetchArticles()
