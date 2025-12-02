@@ -894,7 +894,7 @@ npm run build
 
 2. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/leaf-ui-backend.git
+   git clone https://github.com/ydcloud-dy/leaf-ui-backend.git
    cd leaf-ui-backend
    ```
 
@@ -950,9 +950,8 @@ docs: 更新 README 文档
 
 如有问题或建议，请通过以下方式联系：
 
-- 提交 [Issue](https://github.com/your-username/leaf-ui-backend/issues)
+- 提交 [Issue](https://github.com/ydcloud-dy/leaf-ui-backend/issues)
 - 发送邮件至：dycloudlove@163.com
-- 项目主页：[GitHub Repository](https://github.com/your-username/leaf-ui-backend)
 
 ---
 
