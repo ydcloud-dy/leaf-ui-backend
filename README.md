@@ -185,7 +185,7 @@ Leaf Admin 是一个功能完善的内容管理系统（CMS）后台管理界面
 #### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/ydcloud-dy/leaf-ui-backend.git
 cd leaf-ui-backend
 ```
 
