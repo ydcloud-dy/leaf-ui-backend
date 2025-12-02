@@ -291,13 +291,16 @@ const formatDate = (date) => {
 const fetchArticles = async () => {
   loading.value = true
   try {
-    const res = await getArticles({
+    const params = {
       page: pagination.page,
-      limit: pagination.limit,
+      page_size: pagination.limit,  // 改为 page_size
       ...searchParams
-    })
-    articles.value = res.data.list
-    pagination.total = res.data.total
+    }
+    console.log('请求参数:', params)
+    const res = await getArticles(params)
+    console.log('响应数据:', res)
+    articles.value = res.data.list || res.data.data || []
+    pagination.total = res.data.total || 0
   } finally {
     loading.value = false
   }
