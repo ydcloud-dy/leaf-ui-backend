@@ -169,6 +169,19 @@
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item label="创建时间" prop="created_at">
+          <el-date-picker
+            v-model="form.created_at"
+            type="datetime"
+            placeholder="选择创建时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            {{ isEdit ? '留空则保持原创建时间不变' : '留空则使用当前时间' }}
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" @click="handleSubmit" :loading="submitting">
             {{ isEdit ? '更新' : '创建' }}
@@ -259,7 +272,8 @@ const form = reactive({
   category_id: null,
   tag_ids: [],
   chapter_id: null,
-  status: 0
+  status: 0,
+  created_at: ''
 })
 
 const rules = {
@@ -289,7 +303,8 @@ const fetchData = async () => {
       category_id: article.category_id,
       tag_ids: article.tags?.map(t => t.id) || [],
       chapter_id: article.chapter_id,
-      status: article.status
+      status: article.status,
+      created_at: article.created_at || ''
     })
   }
 }
@@ -401,6 +416,21 @@ const handleSubmit = async () => {
       status: form.status
     }
 
+    // 如果设置了创建时间，则包含在提交数据中
+    // 需要转换为 ISO 8601 格式（Go 标准时间格式）
+    if (form.created_at) {
+      // 如果是 Date 对象，转换为 ISO 字符串
+      if (form.created_at instanceof Date) {
+        submitData.created_at = form.created_at.toISOString()
+      } else if (typeof form.created_at === 'string') {
+        // 如果是字符串，先转为 Date 再转为 ISO
+        submitData.created_at = new Date(form.created_at).toISOString()
+      }
+    }
+
+    // 打印提交数据用于调试
+    console.log('提交的数据:', submitData)
+
     if (isEdit.value) {
       await updateArticle(route.params.id, submitData)
       ElMessage.success('更新成功')
@@ -410,6 +440,7 @@ const handleSubmit = async () => {
     }
     router.push('/articles')
   } catch (error) {
+    console.error('提交失败:', error)
     ElMessage.error(error.response?.data?.message || '操作失败')
   } finally {
     submitting.value = false
