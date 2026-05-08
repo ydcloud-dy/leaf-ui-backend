@@ -1,161 +1,99 @@
 <template>
   <div class="dashboard">
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #409EFF">
-              <el-icon size="24"><Document /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.article_count || 0 }}</div>
-              <div class="stat-label">文章总数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #67C23A">
-              <el-icon size="24"><User /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.user_count || 0 }}</div>
-              <div class="stat-label">用户总数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #E6A23C">
-              <el-icon size="24"><ChatDotRound /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.comment_count || 0 }}</div>
-              <div class="stat-label">评论总数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #F56C6C">
-              <el-icon size="24"><View /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.total_views || 0 }}</div>
-              <div class="stat-label">总浏览量</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <section class="dashboard-hero">
+      <div class="hero-copy">
+        <span class="hero-kicker">Overview</span>
+        <h3>内容运营控制台</h3>
+        <p>快速查看内容规模、访问热度和实时在线状态，方便你判断今天需要优先处理的事情。</p>
+      </div>
 
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #909399">
-              <el-icon size="24"><Calendar /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.site_runtime || 0 }}</div>
-              <div class="stat-label">运行天数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #13C2C2">
-              <el-icon size="24"><TrendCharts /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ stats.today_views || 0 }}</div>
-              <div class="stat-label">今日浏览</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card online-card" @click="showOnlineUsers">
-          <div class="stat-content" style="cursor: pointer;">
-            <div class="stat-icon" style="background-color: #52C41A">
-              <el-icon size="24"><UserFilled /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value online-count">{{ stats.online_count || 0 }}</div>
-              <div class="stat-label">
-                <span class="online-indicator"></span>
-                当前在线
-                <el-icon style="margin-left: 4px;"><Right /></el-icon>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-icon" style="background-color: #722ED1">
-              <el-icon size="24"><Timer /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ formatDuration(stats.avg_visit_duration) }}</div>
-              <div class="stat-label">平均访问</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+      <div class="hero-metrics">
+        <div class="hero-metric">
+          <span>今日浏览</span>
+          <strong>{{ formatNumber(stats.today_views) }}</strong>
+        </div>
+        <button class="hero-metric is-clickable" type="button" @click="showOnlineUsers">
+          <span>
+            <i class="online-indicator"></i>
+            当前在线
+          </span>
+          <strong>{{ formatNumber(stats.online_count) }}</strong>
+        </button>
+        <div class="hero-metric">
+          <span>平均访问</span>
+          <strong>{{ formatDuration(stats.avg_visit_duration) }}</strong>
+        </div>
+      </div>
+    </section>
 
-    <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <span>分类统计</span>
-          </template>
-          <div class="stats-list">
-            <div class="stats-item">
-              <span class="stats-item-label">文章分类</span>
-              <span class="stats-item-value">{{ stats.category_count || 0 }} 个</span>
-            </div>
-            <div class="stats-item">
-              <span class="stats-item-label">文章标签</span>
-              <span class="stats-item-value">{{ stats.tag_count || 0 }} 个</span>
-            </div>
-            <div class="stats-item">
-              <span class="stats-item-label">章节笔记</span>
-              <span class="stats-item-value">{{ stats.chapter_count || 0 }} 个</span>
+    <section class="metric-grid" aria-label="站点指标">
+      <component
+        :is="metric.clickable ? 'button' : 'div'"
+        v-for="metric in metricCards"
+        :key="metric.key"
+        class="metric-card"
+        :class="[`is-${metric.tone}`, { 'is-clickable': metric.clickable }]"
+        :type="metric.clickable ? 'button' : undefined"
+        @click="metric.clickable && showOnlineUsers()"
+      >
+        <span class="metric-icon">
+          <el-icon><component :is="metric.icon" /></el-icon>
+        </span>
+        <span class="metric-meta">
+          <span class="metric-label">{{ metric.label }}</span>
+          <strong>{{ metric.value }}</strong>
+          <span class="metric-helper">{{ metric.helper }}</span>
+        </span>
+        <el-icon v-if="metric.clickable" class="metric-arrow"><Right /></el-icon>
+      </component>
+    </section>
+
+    <section class="dashboard-content">
+      <el-card class="panel-card taxonomy-panel">
+        <template #header>
+          <div class="panel-header">
+            <div>
+              <span>内容结构</span>
+              <p>分类、标签和笔记章节概览</p>
             </div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <span>热门文章 Top 10</span>
-          </template>
-          <div class="hot-articles">
-            <div
-              v-for="(article, index) in hotArticles"
-              :key="article.id"
-              class="hot-article-item"
-            >
-              <span class="rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
-              <span class="title">{{ article.title }}</span>
-              <span class="views">{{ article.view_count }} 次</span>
+        </template>
+        <div class="taxonomy-list">
+          <div v-for="item in taxonomyCards" :key="item.label" class="taxonomy-item">
+            <span class="taxonomy-icon">
+              <el-icon><component :is="item.icon" /></el-icon>
+            </span>
+            <div>
+              <span>{{ item.label }}</span>
+              <strong>{{ formatNumber(item.value) }} 个</strong>
             </div>
-            <el-empty v-if="hotArticles.length === 0" description="暂无数据" :image-size="80" />
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+      </el-card>
+
+      <el-card class="panel-card hot-panel">
+        <template #header>
+          <div class="panel-header">
+            <div>
+              <span>热门文章 Top 10</span>
+              <p>按浏览量排序的内容表现</p>
+            </div>
+          </div>
+        </template>
+        <div class="hot-articles">
+          <div
+            v-for="(article, index) in hotArticles"
+            :key="article.id"
+            class="hot-article-item"
+          >
+            <span class="rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
+            <span class="title">{{ article.title }}</span>
+            <span class="views">{{ formatNumber(article.view_count) }} 次</span>
+          </div>
+          <el-empty v-if="hotArticles.length === 0" description="暂无数据" :image-size="92" />
+        </div>
+      </el-card>
+    </section>
 
     <!-- 在线用户详情对话框 -->
     <el-dialog
@@ -256,13 +194,92 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getStats, getHotArticles, getOnlineUsers } from '@/api/system'
 import { ElMessage } from 'element-plus'
 
 const stats = ref({})
 const hotArticles = ref([])
 let refreshInterval = null
+
+const formatNumber = (value) => {
+  const number = Number(value || 0)
+  return number.toLocaleString('zh-CN')
+}
+
+const metricCards = computed(() => [
+  {
+    key: 'articles',
+    label: '文章总数',
+    value: `${formatNumber(stats.value.article_count)} 篇`,
+    helper: '已创建内容',
+    icon: 'Document',
+    tone: 'blue'
+  },
+  {
+    key: 'users',
+    label: '用户总数',
+    value: `${formatNumber(stats.value.user_count)} 人`,
+    helper: '注册用户',
+    icon: 'User',
+    tone: 'green'
+  },
+  {
+    key: 'comments',
+    label: '评论总数',
+    value: `${formatNumber(stats.value.comment_count)} 条`,
+    helper: '互动反馈',
+    icon: 'ChatDotRound',
+    tone: 'amber'
+  },
+  {
+    key: 'views',
+    label: '总浏览量',
+    value: `${formatNumber(stats.value.total_views)} 次`,
+    helper: '累计访问',
+    icon: 'View',
+    tone: 'red'
+  },
+  {
+    key: 'runtime',
+    label: '运行天数',
+    value: `${formatNumber(stats.value.site_runtime)} 天`,
+    helper: '站点在线',
+    icon: 'Calendar',
+    tone: 'slate'
+  },
+  {
+    key: 'today',
+    label: '今日浏览',
+    value: `${formatNumber(stats.value.today_views)} 次`,
+    helper: '今日访问',
+    icon: 'TrendCharts',
+    tone: 'cyan'
+  },
+  {
+    key: 'online',
+    label: '当前在线',
+    value: `${formatNumber(stats.value.online_count)} 人`,
+    helper: '点击查看详情',
+    icon: 'UserFilled',
+    tone: 'emerald',
+    clickable: true
+  },
+  {
+    key: 'duration',
+    label: '平均访问',
+    value: formatDuration(stats.value.avg_visit_duration),
+    helper: '单次停留',
+    icon: 'Timer',
+    tone: 'violet'
+  }
+])
+
+const taxonomyCards = computed(() => [
+  { label: '文章分类', value: stats.value.category_count, icon: 'Folder' },
+  { label: '文章标签', value: stats.value.tag_count, icon: 'PriceTag' },
+  { label: '章节笔记', value: stats.value.chapter_count, icon: 'Notebook' }
+])
 
 // 在线用户相关
 const onlineUsersDialogVisible = ref(false)
@@ -275,7 +292,7 @@ const onlineUsersData = ref({
   summary: null
 })
 
-const formatDuration = (seconds) => {
+function formatDuration(seconds) {
   if (!seconds || seconds === 0) return '0秒'
   const minutes = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
@@ -363,55 +380,332 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard {
-  padding: 0;
+  display: grid;
+  gap: 20px;
 }
 
-.stats-row {
-  margin-bottom: 20px;
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.86fr);
+  gap: 22px;
+  padding: 28px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: var(--admin-radius);
+  background:
+    linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(30, 41, 59, 0.92)),
+    var(--admin-sidebar);
+  box-shadow: var(--admin-shadow-md);
+  overflow: hidden;
 }
 
-.stat-card {
+.hero-copy {
+  color: #fff;
+}
+
+.hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hero-copy h3 {
+  margin: 18px 0 0;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.hero-copy p {
+  max-width: 560px;
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-content: end;
+}
+
+.hero-metric {
+  min-height: 118px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-align: left;
 }
 
-.stat-content {
+.hero-metric span {
   display: flex;
   align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 760;
 }
 
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
+.hero-metric strong {
+  display: block;
+  margin-top: 20px;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 860;
+  line-height: 1.15;
+}
+
+.hero-metric.is-clickable {
+  cursor: pointer;
+}
+
+.hero-metric.is-clickable:hover {
+  border-color: rgba(34, 197, 94, 0.48);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  position: relative;
+  min-height: 128px;
   display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-sm);
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--admin-border-strong);
+  box-shadow: var(--admin-shadow-md);
+}
+
+.metric-card.is-clickable {
+  cursor: pointer;
+}
+
+.metric-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  margin-right: 16px;
+  flex: 0 0 42px;
+  border-radius: 8px;
+  font-size: 22px;
 }
 
-.stat-info {
-  flex: 1;
+.metric-meta {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #333;
+.metric-label,
+.metric-helper {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.stat-label {
-  font-size: 14px;
-  color: #999;
-  margin-top: 4px;
+.metric-meta strong {
+  color: var(--admin-heading);
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.metric-arrow {
+  position: absolute;
+  right: 14px;
+  top: 18px;
+  color: var(--admin-subtle);
+}
+
+.metric-card.is-blue .metric-icon {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.metric-card.is-green .metric-icon,
+.metric-card.is-emerald .metric-icon {
+  color: #16a34a;
+  background: #ecfdf3;
+}
+
+.metric-card.is-amber .metric-icon {
+  color: #d97706;
+  background: #fffbeb;
+}
+
+.metric-card.is-red .metric-icon {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.metric-card.is-slate .metric-icon {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.metric-card.is-cyan .metric-icon {
+  color: #0891b2;
+  background: #ecfeff;
+}
+
+.metric-card.is-violet .metric-icon {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.7fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.panel-card {
+  min-height: 360px;
+}
+
+.panel-header {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
-/* 在线人数特殊样式 */
-.online-card .online-count {
-  color: #52C41A;
+.panel-header span {
+  color: var(--admin-heading);
+  font-size: 16px;
+  font-weight: 820;
+}
+
+.panel-header p {
+  margin: 6px 0 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.taxonomy-list {
+  display: grid;
+  gap: 14px;
+}
+
+.taxonomy-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface-soft);
+}
+
+.taxonomy-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
+  font-size: 22px;
+}
+
+.taxonomy-item span {
+  color: var(--admin-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.taxonomy-item strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--admin-heading);
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.hot-articles {
+  max-height: 346px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.hot-article-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.hot-article-item:last-child {
+  border-bottom: none;
+}
+
+.rank {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rank.top {
+  color: #fff;
+  background: var(--admin-primary);
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--admin-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.views {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .online-indicator {
@@ -434,84 +728,33 @@ onUnmounted(() => {
   }
 }
 
-.chart-card {
-  border-radius: 8px;
+@media (max-width: 1180px) {
+  .dashboard-hero,
+  .dashboard-content {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.stats-list {
-  padding: 10px 0;
-}
+@media (max-width: 720px) {
+  .dashboard-hero {
+    padding: 20px;
+  }
 
-.stats-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
+  .hero-copy h3 {
+    font-size: 24px;
+  }
 
-.stats-item:last-child {
-  border-bottom: none;
-}
+  .hero-metrics,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
 
-.stats-item-label {
-  font-size: 14px;
-  color: #666;
-}
-
-.stats-item-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-}
-
-.hot-articles {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.hot-article-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.hot-article-item:last-child {
-  border-bottom: none;
-}
-
-.rank {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  background: #f0f0f0;
-  color: #999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.rank.top {
-  background: #409EFF;
-  color: #fff;
-}
-
-.title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  margin-right: 12px;
-}
-
-.views {
-  color: #999;
-  font-size: 12px;
-  flex-shrink: 0;
+  .metric-card {
+    min-height: 112px;
+  }
 }
 </style>

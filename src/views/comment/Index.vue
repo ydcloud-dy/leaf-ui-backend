@@ -2,7 +2,12 @@
   <div class="comment-management">
     <el-card>
       <template #header>
-        <span>评论列表</span>
+        <div class="card-header">
+          <div class="page-title-block">
+            <strong>评论列表</strong>
+            <span>审核互动内容，清理无效评论</span>
+          </div>
+        </div>
       </template>
 
       <el-form inline class="search-form">
@@ -14,7 +19,10 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="fetchComments">搜索</el-button>
+          <el-button type="primary" @click="fetchComments">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -50,14 +58,23 @@
               size="small"
               type="success"
               @click="handleUpdateStatus(row, 1)"
-            >通过</el-button>
+            >
+              <el-icon><Check /></el-icon>
+              通过
+            </el-button>
             <el-button
               v-if="row.status === 0"
               size="small"
               type="warning"
               @click="handleUpdateStatus(row, 2)"
-            >拒绝</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            >
+              <el-icon><Close /></el-icon>
+              拒绝
+            </el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -141,7 +158,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.search-form {
-  margin-bottom: 20px;
-}
 </style>

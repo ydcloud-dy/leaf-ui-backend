@@ -2,7 +2,12 @@
   <div class="profile-container">
     <el-card>
       <template #header>
-        <span>个人信息</span>
+        <div class="card-header">
+          <div class="page-title-block">
+            <strong>个人信息</strong>
+            <span>同步博客前台展示的作者资料</span>
+          </div>
+        </div>
       </template>
 
       <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-width="100px">
@@ -55,6 +60,7 @@
 
         <el-form-item>
           <el-button type="primary" @click="handleUpdateProfile" :loading="profileLoading">
+            <el-icon><Check /></el-icon>
             更新信息
           </el-button>
         </el-form-item>
@@ -63,7 +69,12 @@
 
     <el-card style="margin-top: 20px;">
       <template #header>
-        <span>修改密码</span>
+        <div class="card-header">
+          <div class="page-title-block">
+            <strong>修改密码</strong>
+            <span>更新当前登录账号的安全凭据</span>
+          </div>
+        </div>
       </template>
 
       <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px">
@@ -77,6 +88,7 @@
 
         <el-form-item>
           <el-button type="primary" @click="handleChangePassword" :loading="passwordLoading">
+            <el-icon><Lock /></el-icon>
             修改密码
           </el-button>
         </el-form-item>
@@ -271,11 +283,7 @@ onMounted(() => {
 
 <style scoped>
 .profile-container {
-  max-width: 600px;
-}
-
-.profile-container :deep(.el-card__header) {
-  font-weight: bold;
+  max-width: 820px;
 }
 
 .avatar-uploader-wrapper {
@@ -285,18 +293,20 @@ onMounted(() => {
 }
 
 .avatar-uploader :deep(.el-upload) {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+  border: 1px dashed var(--admin-border-strong);
+  border-radius: var(--admin-radius);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s;
+  background: var(--admin-surface-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   width: 178px;
   height: 178px;
 }
 
 .avatar-uploader :deep(.el-upload:hover) {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .avatar-uploader-icon {

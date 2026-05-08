@@ -2,9 +2,15 @@
   <div class="chapter-container">
     <el-card>
       <template #header>
-        <div class="header">
-          <span>章节管理</span>
-          <el-button type="primary" @click="showDialog()">新建章节</el-button>
+        <div class="card-header">
+          <div class="page-title-block">
+            <strong>章节管理</strong>
+            <span>维护笔记目录和父子章节关系</span>
+          </div>
+          <el-button type="primary" @click="showDialog()">
+            <el-icon><Plus /></el-icon>
+            新建章节
+          </el-button>
         </div>
       </template>
 
@@ -40,8 +46,14 @@
         <el-table-column prop="sort" label="排序" width="100" />
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="showDialog(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="primary" size="small" @click="showDialog(row)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.id)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -243,17 +255,4 @@ const handleDelete = async (id) => {
 </script>
 
 <style scoped>
-.chapter-container {
-  padding: 20px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.filter-form {
-  margin-bottom: 20px;
-}
 </style>

@@ -3,14 +3,20 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>文件列表</span>
+          <div class="page-title-block">
+            <strong>文件列表</strong>
+            <span>管理文章封面和图片素材</span>
+          </div>
           <el-upload
             :action="''"
             :show-file-list="false"
             :before-upload="handleUpload"
             accept="image/*"
           >
-            <el-button type="primary">上传文件</el-button>
+            <el-button type="primary">
+              <el-icon><Upload /></el-icon>
+              上传文件
+            </el-button>
           </el-upload>
         </div>
       </template>
@@ -25,10 +31,17 @@
             <div class="file-size">{{ formatSize(file.size) }}</div>
           </div>
           <div class="file-actions">
-            <el-button size="small" @click="copyUrl(file.url)">复制链接</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(file)">删除</el-button>
+            <el-button size="small" @click="copyUrl(file.url)">
+              <el-icon><Link /></el-icon>
+              复制链接
+            </el-button>
+            <el-button size="small" type="danger" @click="handleDelete(file)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </div>
         </div>
+        <el-empty v-if="!loading && files.length === 0" description="暂无文件" />
       </div>
 
       <el-pagination
@@ -113,27 +126,30 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
+  min-height: 260px;
 }
 
 .file-item {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
   overflow: hidden;
+  background: #fff;
+  box-shadow: var(--admin-shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--admin-shadow-md);
 }
 
 .file-preview {
-  height: 150px;
-  background: #f5f7fa;
+  aspect-ratio: 16 / 10;
+  background: var(--admin-surface-soft);
 }
 
 .file-preview .el-image {
@@ -142,11 +158,13 @@ onMounted(() => {
 }
 
 .file-info {
-  padding: 8px 12px;
+  padding: 12px;
 }
 
 .file-name {
   font-size: 14px;
+  font-weight: 720;
+  color: var(--admin-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -154,14 +172,22 @@ onMounted(() => {
 
 .file-size {
   font-size: 12px;
-  color: #999;
+  color: var(--admin-muted);
   margin-top: 4px;
 }
 
 .file-actions {
-  padding: 8px 12px;
-  border-top: 1px solid #e4e7ed;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--admin-border);
   display: flex;
   gap: 8px;
+}
+
+.file-actions .el-button {
+  flex: 1;
+}
+
+.file-grid :deep(.el-empty) {
+  grid-column: 1 / -1;
 }
 </style>

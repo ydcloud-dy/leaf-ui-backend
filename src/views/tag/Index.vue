@@ -3,8 +3,14 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>标签列表</span>
-          <el-button type="primary" @click="showCreateDialog">新增标签</el-button>
+          <div class="page-title-block">
+            <strong>标签列表</strong>
+            <span>维护文章主题和标签颜色</span>
+          </div>
+          <el-button type="primary" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增标签
+          </el-button>
         </div>
       </template>
 
@@ -13,7 +19,10 @@
         <el-table-column prop="name" label="标签名" />
         <el-table-column label="颜色" width="120">
           <template #default="{ row }">
-            <el-tag :color="row.color" v-if="row.color">{{ row.color }}</el-tag>
+            <span v-if="row.color" class="color-cell">
+              <i :style="{ backgroundColor: row.color }"></i>
+              {{ row.color }}
+            </span>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -24,7 +33,10 @@
         </el-table-column>
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -117,9 +129,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.card-header {
-  display: flex;
-  justify-content: space-between;
+.color-cell {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.color-cell i {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 50%;
+  box-shadow: var(--admin-shadow-sm);
 }
 </style>

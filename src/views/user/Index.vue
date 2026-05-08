@@ -3,14 +3,20 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>用户列表</span>
-          <el-button type="primary" @click="showCreateDialog">新增用户</el-button>
+          <div class="page-title-block">
+            <strong>用户列表</strong>
+            <span>维护账号资料、状态和登录凭据</span>
+          </div>
+          <el-button type="primary" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增用户
+          </el-button>
         </div>
       </template>
 
       <el-form inline class="search-form">
         <el-form-item>
-          <el-input v-model="searchParams.keyword" placeholder="搜索用户名/邮箱" clearable />
+          <el-input v-model="searchParams.keyword" placeholder="搜索用户名/邮箱" clearable prefix-icon="Search" />
         </el-form-item>
         <el-form-item>
           <el-select v-model="searchParams.status" placeholder="状态" clearable>
@@ -19,15 +25,27 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="fetchUsers">搜索</el-button>
+          <el-button type="primary" @click="fetchUsers">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
         </el-form-item>
       </el-form>
 
       <el-table :data="users" v-loading="loading" border>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="nickname" label="昵称" />
+        <el-table-column label="用户" min-width="200">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar :size="34" :src="row.avatar">{{ row.username?.charAt(0)?.toUpperCase() }}</el-avatar>
+              <div>
+                <strong>{{ row.nickname || row.username }}</strong>
+                <span>@{{ row.username }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
@@ -42,9 +60,18 @@
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="showEditDialog(row)">编辑</el-button>
-            <el-button size="small" type="warning" @click="showPasswordDialog(row)">改密码</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" @click="showEditDialog(row)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button size="small" type="warning" @click="showPasswordDialog(row)">
+              <el-icon><Lock /></el-icon>
+              改密码
+            </el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -294,13 +321,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.card-header {
+.user-cell {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.user-cell strong,
+.user-cell span {
+  display: block;
+}
+
+.user-cell strong {
+  color: var(--admin-heading);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.user-cell span {
+  margin-top: 2px;
+  color: var(--admin-muted);
+  font-size: 12px;
 }
 </style>

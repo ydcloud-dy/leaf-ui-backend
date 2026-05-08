@@ -3,8 +3,14 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>分类列表</span>
-          <el-button type="primary" @click="showCreateDialog">新增分类</el-button>
+          <div class="page-title-block">
+            <strong>分类列表</strong>
+            <span>组织文章内容的一级结构</span>
+          </div>
+          <el-button type="primary" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增分类
+          </el-button>
         </div>
       </template>
 
@@ -20,7 +26,10 @@
         </el-table-column>
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -118,9 +127,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>

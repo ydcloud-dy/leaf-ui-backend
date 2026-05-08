@@ -3,28 +3,40 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>文章列表</span>
+          <div class="page-title-block">
+            <strong>文章列表</strong>
+            <span>管理发布状态、分类标签和批量导入导出</span>
+          </div>
           <div class="header-actions">
-            <el-button type="success" @click="importDialogVisible = true">批量导入</el-button>
-            <el-button type="warning" @click="handleExportAll">导出全部</el-button>
-            <el-button type="primary" @click="$router.push('/articles/create')">新增文章</el-button>
+            <el-button type="success" @click="importDialogVisible = true">
+              <el-icon><Upload /></el-icon>
+              批量导入
+            </el-button>
+            <el-button type="warning" @click="handleExportAll">
+              <el-icon><Download /></el-icon>
+              导出全部
+            </el-button>
+            <el-button type="primary" @click="$router.push('/articles/create')">
+              <el-icon><Plus /></el-icon>
+              新增文章
+            </el-button>
           </div>
         </div>
       </template>
 
       <el-form inline class="search-form">
         <el-form-item>
-          <el-input v-model="searchParams.keyword" placeholder="搜索标题" clearable style="width: 200px" />
+          <el-input v-model="searchParams.keyword" placeholder="搜索标题" clearable prefix-icon="Search" />
         </el-form-item>
         <el-form-item>
-          <el-select v-model="searchParams.status" placeholder="状态" clearable style="width: 120px">
+          <el-select v-model="searchParams.status" placeholder="状态" clearable>
             <el-option label="草稿" value="0" />
             <el-option label="已发布" value="1" />
             <el-option label="已下架" value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-select v-model="searchParams.chapter_id" placeholder="章节" clearable style="width: 180px">
+          <el-select v-model="searchParams.chapter_id" placeholder="章节" clearable>
             <el-option
               v-for="chapter in chapters"
               :key="chapter.id"
@@ -34,45 +46,64 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="fetchArticles">搜索</el-button>
+          <el-button type="primary" @click="fetchArticles">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
         </el-form-item>
       </el-form>
 
-      <div v-if="selectedArticles.length > 0" style="margin-bottom: 15px">
-        <el-alert type="info" :closable="false">
-          已选择 {{ selectedArticles.length }} 篇文章
-          <el-button size="small" type="success" @click="handleBatchPublish" style="margin-left: 10px">
+      <div v-if="selectedArticles.length > 0" class="selection-bar">
+        <strong>已选择 {{ selectedArticles.length }} 篇文章</strong>
+        <div class="selection-actions">
+          <el-button size="small" type="success" @click="handleBatchPublish">
+            <el-icon><Top /></el-icon>
             批量上架
           </el-button>
-          <el-button size="small" type="warning" @click="handleBatchOffline" style="margin-left: 10px">
+          <el-button size="small" type="warning" @click="handleBatchOffline">
+            <el-icon><Bottom /></el-icon>
             批量下架
           </el-button>
-          <el-button size="small" type="primary" @click="batchUpdateDialogVisible = true" style="margin-left: 10px">
+          <el-button size="small" type="primary" @click="batchUpdateDialogVisible = true">
+            <el-icon><Edit /></el-icon>
             批量更新
           </el-button>
-          <el-button size="small" type="info" @click="handleExportSelected" style="margin-left: 10px">
+          <el-button size="small" type="info" @click="handleExportSelected">
+            <el-icon><Download /></el-icon>
             导出选中
           </el-button>
-          <el-button size="small" type="danger" @click="handleBatchDelete" style="margin-left: 10px">
+          <el-button size="small" type="danger" @click="handleBatchDelete">
+            <el-icon><Delete /></el-icon>
             批量删除
           </el-button>
-        </el-alert>
+        </div>
       </div>
 
       <el-table :data="articles" v-loading="loading" border @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column label="标题" min-width="240" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div class="article-title-cell">
+              <strong>{{ row.title }}</strong>
+              <span v-if="row.summary">{{ row.summary }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="分类" width="120">
           <template #default="{ row }">
-            {{ row.category?.name || '-' }}
+            <el-tag v-if="row.category?.name" type="info">{{ row.category.name }}</el-tag>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="标签" width="150">
           <template #default="{ row }">
-            <el-tag v-for="tag in row.tags" :key="tag.id" size="small" style="margin-right: 4px">
-              {{ tag.name }}
-            </el-tag>
+            <div class="tag-list">
+              <el-tag v-for="tag in row.tags" :key="tag.id" size="small">
+                {{ tag.name }}
+              </el-tag>
+              <span v-if="!row.tags || row.tags.length === 0">-</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -91,20 +122,30 @@
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="$router.push(`/articles/${row.id}/edit`)">编辑</el-button>
+            <el-button size="small" @click="$router.push(`/articles/${row.id}/edit`)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
             <el-button
               v-if="row.status !== 1"
               size="small"
               type="success"
               @click="handleUpdateStatus(row, 1)"
-            >上架</el-button>
+            >
+              上架
+            </el-button>
             <el-button
               v-if="row.status === 1"
               size="small"
               type="warning"
               @click="handleUpdateStatus(row, 2)"
-            >下架</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            >
+              下架
+            </el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -696,43 +737,62 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.article-title-cell {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
-.header-actions {
-  display: flex;
-  gap: 10px;
+.article-title-cell strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--admin-heading);
+  font-size: 14px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.article-title-cell span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .file-item {
   cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  padding: 5px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 6px;
   margin-bottom: 10px;
-  transition: all 0.3s;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .file-item:hover {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .file-item.selected {
-  border-color: #67c23a;
-  background-color: #f0f9ff;
+  border-color: var(--admin-green);
+  background-color: #f0fdf4;
 }
 
 .file-name {
   font-size: 12px;
   text-align: center;
   margin-top: 5px;
+  color: var(--admin-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

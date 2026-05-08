@@ -2,7 +2,12 @@
   <div class="article-edit">
     <el-card>
       <template #header>
-        <span>{{ isEdit ? '编辑文章' : '创建文章' }}</span>
+        <div class="card-header">
+          <div class="page-title-block">
+            <strong>{{ isEdit ? '编辑文章' : '创建文章' }}</strong>
+            <span>编辑内容正文、封面、分类标签和发布状态</span>
+          </div>
+        </div>
       </template>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
@@ -61,8 +66,14 @@
             <div v-if="form.cover" class="cover-preview">
               <img :src="form.cover" class="cover-image" />
               <div class="cover-actions">
-                <el-button type="primary" size="small" @click="showCoverSelector">选择封面</el-button>
-                <el-button type="danger" size="small" @click="removeCover">移除封面</el-button>
+                <el-button type="primary" size="small" @click="showCoverSelector">
+                  <el-icon><Picture /></el-icon>
+                  选择封面
+                </el-button>
+                <el-button type="danger" size="small" @click="removeCover">
+                  <el-icon><Delete /></el-icon>
+                  移除封面
+                </el-button>
               </div>
             </div>
 
@@ -95,7 +106,7 @@
                 style="width: 200px"
                 @input="fetchFiles"
               />
-              <el-button type="primary" @click="fetchFiles">刷新</el-button>
+            <el-button type="primary" @click="fetchFiles">刷新</el-button>
             </div>
 
             <div v-loading="filesLoading" class="files-grid">
@@ -184,9 +195,13 @@
 
         <el-form-item>
           <el-button type="primary" @click="handleSubmit" :loading="submitting">
+            <el-icon><Check /></el-icon>
             {{ isEdit ? '更新' : '创建' }}
           </el-button>
-          <el-button @click="$router.back()">取消</el-button>
+          <el-button @click="$router.back()">
+            <el-icon><Close /></el-icon>
+            取消
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -457,6 +472,10 @@ onMounted(() => {
   max-width: 1400px;
 }
 
+.article-edit :deep(.el-card__body) {
+  padding: 24px;
+}
+
 .article-edit :deep(.el-form-item__content) {
   line-height: normal;
 }
@@ -468,18 +487,20 @@ onMounted(() => {
 }
 
 .cover-uploader :deep(.el-upload) {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+  border: 1px dashed var(--admin-border-strong);
+  border-radius: var(--admin-radius);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s;
+  background: var(--admin-surface-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   width: 360px;
   height: 202px;
 }
 
 .cover-uploader :deep(.el-upload:hover) {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .cover-placeholder {
@@ -490,23 +511,25 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #8c939d;
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+  color: var(--admin-muted);
+  border: 1px dashed var(--admin-border-strong);
+  border-radius: var(--admin-radius);
+  background: var(--admin-surface-soft);
   cursor: pointer;
-  transition: border-color 0.3s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cover-placeholder:hover {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
 }
 
 .cover-preview {
   width: 360px;
   height: 202px;
   position: relative;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
   overflow: hidden;
 }
 
@@ -527,7 +550,7 @@ onMounted(() => {
   gap: 8px;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s ease;
 }
 
 .cover-preview:hover .cover-actions {
@@ -576,20 +599,20 @@ onMounted(() => {
   border: 2px solid transparent;
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   aspect-ratio: 16 / 9;
-  background: #f5f7fa;
+  background: var(--admin-surface-soft);
 }
 
 .file-item:hover {
-  border-color: #409eff;
+  border-color: var(--admin-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: var(--admin-shadow-md);
 }
 
 .file-item.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 .file-item img {
