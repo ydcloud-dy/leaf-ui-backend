@@ -76,10 +76,12 @@ const activeCodeBlock = ref(null)
 const codeToolbarCleanups = []
 
 let codeToolbarFrame = 0
-let activeCodeHighlightTimer = 0
-let highlightRuntimePromise = null
+let activeCodeNormalizeTimer = 0
+let tableEnhanceFrame = 0
 
 const vditorCdn = 'https://cdn.jsdelivr.net/npm/vditor@3.11.2'
+const tableWidthCommentRegex = /^<!--\s*leaf-table-widths:([0-9.,\s]+)\s*-->$/
+const tableMinColumnWidth = 64
 
 const codeLanguageOptions = [
   'bash',
@@ -146,47 +148,117 @@ const toolbar = [
   'fullscreen'
 ]
 
-const escapeHtml = (value) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+const parseTableWidths = (value) =>
+  String(value || '')
+    .split(',')
+    .map((item) => Math.round(Number(item.trim())))
+    .filter((item) => Number.isFinite(item) && item >= tableMinColumnWidth)
 
-const loadScript = (src, id) =>
-  new Promise((resolve, reject) => {
-    const existing = document.getElementById(id)
-    if (existing) {
-      existing.addEventListener('load', resolve, { once: true })
-      existing.addEventListener('error', reject, { once: true })
-      if (existing.dataset.loaded === 'true') resolve()
-      return
+const formatTableWidthComment = (widths) => `<!-- leaf-table-widths:${widths.map((item) => Math.round(item)).join(',')} -->`
+
+const stripTableWidthComments = (markdown = '') =>
+  markdown
+    .split(/\r?\n/)
+    .filter((line) => !tableWidthCommentRegex.test(line.trim()))
+    .join('\n')
+
+const isFenceLine = (line) => line.match(/^\s*(`{3,}|~{3,})/)
+
+const isTableSeparatorLine = (line) => {
+  const trimmed = line.trim()
+  if (!trimmed.includes('|')) return false
+
+  const cells = trimmed.replace(/^\|/, '').replace(/\|$/, '').split('|')
+  return cells.length > 1 && cells.every((cell) => /^\s*:?-{3,}:?\s*$/.test(cell))
+}
+
+const isTableRowLine = (line) => {
+  const trimmed = line.trim()
+  return Boolean(trimmed && trimmed.includes('|') && !tableWidthCommentRegex.test(trimmed))
+}
+
+const getTableWidthMetaList = (markdown = '') => {
+  const lines = markdown.split(/\r?\n/)
+  const metaList = []
+  let inFence = false
+  let fenceMarker = ''
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const fenceMatch = isFenceLine(lines[index])
+    if (fenceMatch) {
+      const marker = fenceMatch[1]
+      if (!inFence) {
+        inFence = true
+        fenceMarker = marker
+      } else if (marker[0] === fenceMarker[0] && marker.length >= fenceMarker.length) {
+        inFence = false
+        fenceMarker = ''
+      }
+      continue
     }
 
-    const script = document.createElement('script')
-    script.id = id
-    script.src = src
-    script.async = true
-    script.onload = () => {
-      script.dataset.loaded = 'true'
-      resolve()
-    }
-    script.onerror = reject
-    document.head.appendChild(script)
-  })
+    if (inFence) continue
 
-const ensureHighlightRuntime = () => {
-  if (window.hljs) return Promise.resolve()
-  if (!highlightRuntimePromise) {
-    highlightRuntimePromise = loadScript(`${vditorCdn}/dist/js/highlight.js/highlight.min.js`, 'leafHljsScript')
-      .then(() => loadScript(`${vditorCdn}/dist/js/highlight.js/third-languages.js`, 'leafHljsThirdScript'))
-      .catch((error) => {
-        highlightRuntimePromise = null
-        throw error
-      })
+    if (isTableRowLine(lines[index]) && isTableSeparatorLine(lines[index + 1] || '')) {
+      let tableEnd = index + 2
+      while (tableEnd < lines.length && isTableRowLine(lines[tableEnd])) {
+        tableEnd += 1
+      }
+
+      const commentMatch = lines[tableEnd]?.trim().match(tableWidthCommentRegex)
+      metaList.push(commentMatch ? parseTableWidths(commentMatch[1]) : null)
+      index = tableEnd - 1
+    }
   }
-  return highlightRuntimePromise
+
+  return metaList
+}
+
+const appendTableWidthComments = (markdown = '', metaList = []) => {
+  const lines = stripTableWidthComments(markdown).split(/\r?\n/)
+  const output = []
+  let tableIndex = 0
+  let inFence = false
+  let fenceMarker = ''
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    const fenceMatch = isFenceLine(line)
+    if (fenceMatch) {
+      const marker = fenceMatch[1]
+      if (!inFence) {
+        inFence = true
+        fenceMarker = marker
+      } else if (marker[0] === fenceMarker[0] && marker.length >= fenceMarker.length) {
+        inFence = false
+        fenceMarker = ''
+      }
+      output.push(line)
+      continue
+    }
+
+    if (!inFence && isTableRowLine(line) && isTableSeparatorLine(lines[index + 1] || '')) {
+      output.push(line, lines[index + 1])
+      index += 2
+
+      while (index < lines.length && isTableRowLine(lines[index])) {
+        output.push(lines[index])
+        index += 1
+      }
+
+      const widths = metaList[tableIndex]
+      if (Array.isArray(widths) && widths.length > 0) {
+        output.push(formatTableWidthComment(widths))
+      }
+      tableIndex += 1
+      index -= 1
+      continue
+    }
+
+    output.push(line)
+  }
+
+  return output.join('\n')
 }
 
 const getCodeElement = (block = activeCodeBlock.value) => block?.querySelector('pre:first-child > code') || null
@@ -214,88 +286,207 @@ const setActiveCodeBlock = (block) => {
   }
 }
 
-const getCaretTextOffset = (root) => {
-  const selection = document.getSelection()
-  if (!selection?.rangeCount || !root.contains(selection.anchorNode)) return null
-
-  const range = document.createRange()
-  range.setStart(root, 0)
-  range.setEnd(selection.anchorNode, selection.anchorOffset)
-  return range.toString().length
-}
-
-const restoreCaretTextOffset = (root, offset) => {
-  if (offset === null) return
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-  let currentOffset = 0
-  let textNode = null
-  let textOffset = 0
-
-  while (walker.nextNode()) {
-    const node = walker.currentNode
-    const nextOffset = currentOffset + node.textContent.length
-    if (offset <= nextOffset) {
-      textNode = node
-      textOffset = Math.max(0, offset - currentOffset)
-      break
-    }
-    currentOffset = nextOffset
-  }
-
-  if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
-    textNode = document.createTextNode('')
-    root.appendChild(textNode)
-    textOffset = 0
-  }
-
-  const range = document.createRange()
-  range.setStart(textNode, Math.min(textOffset, textNode.textContent.length))
-  range.collapse(true)
-
-  const selection = document.getSelection()
-  selection.removeAllRanges()
-  selection.addRange(range)
-}
-
-const highlightCodeBlock = async (block, keepCaret = false) => {
+const decorateCodeBlock = (block) => {
   const codeElement = getCodeElement(block)
   if (!codeElement) return
 
-  const caretOffset = keepCaret ? getCaretTextOffset(codeElement) : null
   const language = getCodeLanguage(codeElement)
-  const rawCode = codeElement.textContent || ''
   const nextClassNames = ['hljs']
 
   if (language) {
     nextClassNames.push(`language-${language}`)
   }
 
-  try {
-    await ensureHighlightRuntime()
-  } catch (error) {
-    codeElement.className = nextClassNames.join(' ')
-    codeElement.innerHTML = rawCode ? escapeHtml(rawCode) : '<wbr>'
-    restoreCaretTextOffset(codeElement, caretOffset)
+  codeElement.className = nextClassNames.join(' ')
+  block.setAttribute('data-code-language', language ? language.toUpperCase() : 'TEXT')
+}
+
+const decorateAllCodeBlocks = () => {
+  const blocks = editorRef.value?.querySelectorAll('.vditor-wysiwyg__block[data-type="code-block"]') || []
+
+  blocks.forEach((block) => {
+    decorateCodeBlock(block)
+  })
+}
+
+const getEditableTables = (root = editor.value?.vditor?.wysiwyg?.element) => {
+  if (!root) return []
+
+  return Array.from(root.querySelectorAll('table')).filter(
+    (table) => !table.closest('.vditor-wysiwyg__preview')
+  )
+}
+
+const getTableColumnCount = (table) => {
+  const rows = Array.from(table.rows || [])
+  return rows.reduce((max, row) => Math.max(max, row.cells.length), 0)
+}
+
+const getMeasuredColumnWidths = (table) => {
+  const firstRow = table.rows?.[0]
+  if (!firstRow) return []
+
+  return Array.from(firstRow.cells).map((cell) =>
+    Math.max(tableMinColumnWidth, Math.round(cell.getBoundingClientRect().width || tableMinColumnWidth))
+  )
+}
+
+const getTableWidths = (table) => {
+  const storedWidths = parseTableWidths(table.dataset.leafColumnWidths)
+  if (storedWidths.length) return storedWidths
+  return getMeasuredColumnWidths(table)
+}
+
+const applyTableColumnWidths = (table, widths, custom = true) => {
+  const columnCount = getTableColumnCount(table)
+  if (!columnCount) return
+
+  const nextWidths = Array.from({ length: columnCount }, (_, index) =>
+    Math.max(tableMinColumnWidth, Math.round(widths[index] || tableMinColumnWidth))
+  )
+
+  let colgroup = table.querySelector(':scope > colgroup')
+  if (!colgroup) {
+    colgroup = document.createElement('colgroup')
+    table.insertBefore(colgroup, table.firstChild)
+  }
+
+  while (colgroup.children.length < columnCount) {
+    colgroup.appendChild(document.createElement('col'))
+  }
+  while (colgroup.children.length > columnCount) {
+    colgroup.lastElementChild.remove()
+  }
+
+  nextWidths.forEach((width, index) => {
+    colgroup.children[index].style.width = `${width}px`
+  })
+
+  table.classList.add('leaf-resizable-table')
+  table.dataset.leafColumnWidths = nextWidths.join(',')
+  if (custom) {
+    table.dataset.leafTableCustom = 'true'
+  }
+  table.style.tableLayout = 'fixed'
+  table.style.width = `${nextWidths.reduce((sum, width) => sum + width, 0)}px`
+}
+
+const removeTableResizeHandles = (root) => {
+  root?.querySelectorAll?.('.leaf-table-resize-handle').forEach((handle) => handle.remove())
+}
+
+const cleanupTableResizeArtifacts = (root) => {
+  removeTableResizeHandles(root)
+  getEditableTables(root).forEach((table) => {
+    table.querySelector(':scope > colgroup')?.remove()
+    table.classList.remove('leaf-resizable-table')
+    table.removeAttribute('data-leaf-column-widths')
+    table.removeAttribute('data-leaf-table-custom')
+    table.style.removeProperty('table-layout')
+    table.style.removeProperty('width')
+  })
+}
+
+const cleanupCodeBlockArtifacts = (root) => {
+  root?.querySelectorAll?.('.code-popover-theme').forEach((element) => element.remove())
+  root?.querySelectorAll?.('.vditor-wysiwyg__block[data-type="code-block"]').forEach((block) => {
+    block.removeAttribute('data-code-active')
+    block.removeAttribute('data-code-language')
+  })
+  root?.querySelectorAll?.('pre > code.hljs').forEach((codeElement) => {
+    const language = getCodeLanguage(codeElement)
+    codeElement.className = language ? `language-${language}` : ''
+  })
+}
+
+const startTableColumnResize = (event, table, columnIndex) => {
+  event.preventDefault()
+  event.stopPropagation()
+
+  const startX = event.clientX
+  const widths = getTableWidths(table)
+  const startWidth = widths[columnIndex] || tableMinColumnWidth
+
+  table.dataset.leafTableCustom = 'true'
+  document.body.classList.add('leaf-table-resizing')
+
+  const handleMouseMove = (moveEvent) => {
+    const nextWidths = [...widths]
+    nextWidths[columnIndex] = Math.max(tableMinColumnWidth, startWidth + moveEvent.clientX - startX)
+    applyTableColumnWidths(table, nextWidths, true)
+  }
+
+  const handleMouseUp = () => {
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.body.classList.remove('leaf-table-resizing')
+    scheduleTableEnhance()
+    syncValueFromEditor()
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
+
+const enhanceTable = (table) => {
+  const columnCount = getTableColumnCount(table)
+  if (!columnCount) return
+
+  table.classList.add('leaf-resizable-table')
+  removeTableResizeHandles(table)
+
+  const firstRow = table.rows?.[0]
+  if (!firstRow) return
+
+  Array.from(firstRow.cells).forEach((cell, index) => {
+    if (index >= columnCount - 1) return
+
+    const handle = document.createElement('span')
+    handle.className = 'leaf-table-resize-handle'
+    handle.setAttribute('contenteditable', 'false')
+    handle.setAttribute('aria-hidden', 'true')
+    handle.addEventListener('mousedown', (event) => startTableColumnResize(event, table, index))
+    cell.appendChild(handle)
+  })
+}
+
+const enhanceAllTables = () => {
+  getEditableTables().forEach((table) => {
+    enhanceTable(table)
+  })
+}
+
+const scheduleTableEnhance = () => {
+  if (tableEnhanceFrame) return
+  tableEnhanceFrame = window.requestAnimationFrame(() => {
+    tableEnhanceFrame = 0
+    enhanceAllTables()
+  })
+}
+
+const applyStoredTableWidths = (markdown = props.modelValue) => {
+  const metaList = getTableWidthMetaList(markdown || '')
+  if (!metaList.length) {
+    enhanceAllTables()
     return
   }
 
-  const canHighlight = language && window.hljs?.getLanguage(language)
-  const highlighted = canHighlight
-    ? window.hljs.highlight(rawCode, { language, ignoreIllegals: true }).value
-    : escapeHtml(rawCode)
-
-  codeElement.className = nextClassNames.join(' ')
-  codeElement.innerHTML = highlighted || '<wbr>'
-  restoreCaretTextOffset(codeElement, caretOffset)
-}
-
-const highlightAllCodeBlocks = () => {
-  const blocks = editorRef.value?.querySelectorAll('.vditor-wysiwyg__block[data-type="code-block"]') || []
-  blocks.forEach((block) => {
-    highlightCodeBlock(block)
+  getEditableTables().forEach((table, index) => {
+    const widths = metaList[index]
+    if (Array.isArray(widths) && widths.length > 0) {
+      applyTableColumnWidths(table, widths, true)
+    }
+    enhanceTable(table)
   })
 }
+
+const collectTableWidthMeta = (root) =>
+  getEditableTables(root).map((table) => {
+    if (table.dataset.leafTableCustom !== 'true') return null
+
+    const widths = parseTableWidths(table.dataset.leafColumnWidths)
+    return widths.length ? widths : null
+  })
 
 const emitValue = (value) => {
   syncingFromEditor.value = true
@@ -306,9 +497,29 @@ const emitValue = (value) => {
   })
 }
 
-const syncValueFromEditor = () => {
+const getSafeEditorValue = () => {
   if (!editor.value) return
-  emitValue(editor.value.getValue())
+  decorateAllCodeBlocks()
+
+  const vditor = editor.value.vditor
+  const wysiwygElement = vditor?.wysiwyg?.element
+  if (!wysiwygElement || !vditor?.lute?.VditorDOM2Md) {
+    return appendTableWidthComments(editor.value.getValue(), collectTableWidthMeta())
+  }
+
+  const clonedElement = wysiwygElement.cloneNode(true)
+  const tableMetaList = collectTableWidthMeta(clonedElement)
+  cleanupTableResizeArtifacts(clonedElement)
+  cleanupCodeBlockArtifacts(clonedElement)
+
+  return appendTableWidthComments(vditor.lute.VditorDOM2Md(clonedElement.innerHTML), tableMetaList)
+}
+
+const syncValueFromEditor = () => {
+  const value = getSafeEditorValue()
+  if (typeof value === 'string') {
+    emitValue(value)
+  }
 }
 
 const uploadImages = async (files) => {
@@ -334,7 +545,7 @@ const initEditor = () => {
   if (!editorRef.value) return
 
   editor.value = new Vditor(editorRef.value, {
-    value: props.modelValue,
+    value: stripTableWidthComments(props.modelValue),
     mode: 'wysiwyg',
     lang: 'zh_CN',
     icon: 'ant',
@@ -410,12 +621,13 @@ const initEditor = () => {
       themeWrap.appendChild(themeSelect)
       element.insertAdjacentElement('beforeend', themeWrap)
     },
-    input: emitValue,
+    input: syncValueFromEditor,
     after: () => {
       ready.value = true
       editor.value?.setTheme('classic', 'light', codeToolbar.theme)
       bindCodeToolbarEvents()
-      highlightAllCodeBlocks()
+      decorateAllCodeBlocks()
+      applyStoredTableWidths(props.modelValue)
       scheduleCodeToolbarUpdate()
     }
   })
@@ -467,30 +679,36 @@ const bindCodeToolbarEvents = () => {
     [document, 'selectionchange']
   ]
 
+  const handleEditorStructureUpdate = () => {
+    scheduleCodeToolbarUpdate()
+    scheduleTableEnhance()
+  }
+
   targets.forEach(([target, eventName]) => {
     if (!target) return
-    target.addEventListener(eventName, scheduleCodeToolbarUpdate)
-    codeToolbarCleanups.push(() => target.removeEventListener(eventName, scheduleCodeToolbarUpdate))
+    target.addEventListener(eventName, handleEditorStructureUpdate)
+    codeToolbarCleanups.push(() => target.removeEventListener(eventName, handleEditorStructureUpdate))
   })
 
   const handleEditorInput = () => {
     scheduleCodeToolbarUpdate()
-    scheduleActiveCodeHighlight()
+    scheduleTableEnhance()
+    scheduleActiveCodeNormalize()
   }
 
   wysiwygElement?.addEventListener('input', handleEditorInput)
   codeToolbarCleanups.push(() => wysiwygElement?.removeEventListener('input', handleEditorInput))
 }
 
-const scheduleActiveCodeHighlight = () => {
-  if (activeCodeHighlightTimer) {
-    window.clearTimeout(activeCodeHighlightTimer)
+const scheduleActiveCodeNormalize = () => {
+  if (activeCodeNormalizeTimer) {
+    window.clearTimeout(activeCodeNormalizeTimer)
   }
 
-  activeCodeHighlightTimer = window.setTimeout(() => {
-    activeCodeHighlightTimer = 0
+  activeCodeNormalizeTimer = window.setTimeout(() => {
+    activeCodeNormalizeTimer = 0
     if (activeCodeBlock.value) {
-      highlightCodeBlock(activeCodeBlock.value, true)
+      decorateCodeBlock(activeCodeBlock.value)
     }
   }, 260)
 }
@@ -508,22 +726,21 @@ const applyCodeLanguage = () => {
     codeElement.classList.add(`language-${codeToolbar.language}`)
   }
 
-  highlightCodeBlock(activeCodeBlock.value, true).then(() => {
-    syncValueFromEditor()
-    editor.value?.focus()
-    scheduleCodeToolbarUpdate()
-  })
+  decorateCodeBlock(activeCodeBlock.value)
+  syncValueFromEditor()
+  editor.value?.focus()
+  scheduleCodeToolbarUpdate()
 }
 
 const applyCodeTheme = () => {
   editor.value?.setTheme('classic', 'light', codeToolbar.theme)
-  highlightAllCodeBlocks()
+  decorateAllCodeBlocks()
   scheduleCodeToolbarUpdate()
 }
 
 const copyActiveCode = async () => {
   const codeElement = getCodeElement()
-  const text = codeElement?.innerText || ''
+  const text = codeElement?.innerText || codeElement?.textContent || ''
   if (!text) return
 
   try {
@@ -547,15 +764,21 @@ watch(
   () => props.modelValue,
   (value) => {
     if (!ready.value || !editor.value || syncingFromEditor.value) return
-    if (value !== editor.value.getValue()) {
-      editor.value.setValue(value || '', true)
+    if (stripTableWidthComments(value || '') !== editor.value.getValue()) {
+      editor.value.setValue(stripTableWidthComments(value || ''), true)
       nextTick(() => {
-        highlightAllCodeBlocks()
+        decorateAllCodeBlocks()
+        applyStoredTableWidths(value)
         scheduleCodeToolbarUpdate()
       })
     }
   }
 )
+
+defineExpose({
+  getValue: () => getSafeEditorValue(),
+  sync: () => syncValueFromEditor()
+})
 
 onMounted(initEditor)
 
@@ -566,9 +789,13 @@ onBeforeUnmount(() => {
     window.cancelAnimationFrame(codeToolbarFrame)
     codeToolbarFrame = 0
   }
-  if (activeCodeHighlightTimer) {
-    window.clearTimeout(activeCodeHighlightTimer)
-    activeCodeHighlightTimer = 0
+  if (tableEnhanceFrame) {
+    window.cancelAnimationFrame(tableEnhanceFrame)
+    tableEnhanceFrame = 0
+  }
+  if (activeCodeNormalizeTimer) {
+    window.clearTimeout(activeCodeNormalizeTimer)
+    activeCodeNormalizeTimer = 0
   }
   setActiveCodeBlock(null)
   editor.value?.destroy()
@@ -711,6 +938,55 @@ onBeforeUnmount(() => {
   border-radius: var(--admin-radius);
 }
 
+.vditor-editor :deep(.vditor-reset table.leaf-resizable-table) {
+  max-width: none;
+  border-collapse: collapse;
+}
+
+.vditor-editor :deep(.vditor-reset table.leaf-resizable-table th),
+.vditor-editor :deep(.vditor-reset table.leaf-resizable-table td) {
+  position: relative;
+  min-width: 64px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.vditor-editor :deep(.leaf-table-resize-handle) {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  z-index: 8;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.vditor-editor :deep(.leaf-table-resize-handle::after) {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.vditor-editor :deep(.leaf-table-resize-handle:hover::after) {
+  background: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+:global(body.leaf-table-resizing),
+:global(body.leaf-table-resizing *) {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 .vditor-editor :deep(.vditor-outline) {
   border-left: 1px solid var(--admin-border);
   background: rgba(248, 250, 252, 0.78);
@@ -819,7 +1095,7 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--code-border);
   background: var(--code-panel);
   color: var(--code-muted);
-  content: "CODE";
+  content: attr(data-code-language);
   font-family:
     "Inter",
     "PingFang SC",

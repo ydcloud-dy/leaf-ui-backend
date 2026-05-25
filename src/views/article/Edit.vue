@@ -50,6 +50,7 @@
 
             <el-form-item prop="content_markdown" class="content-form-item">
               <MarkdownEditor
+                ref="markdownEditorRef"
                 v-model="form.content_markdown"
                 height="680px"
                 placeholder="从这里开始写正文..."
@@ -326,6 +327,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const formRef = ref()
+const markdownEditorRef = ref()
 const settingsColumnRef = ref()
 const submitting = ref(false)
 const tags = ref([])
@@ -657,6 +659,11 @@ const handleCoverSuccess = (response) => {
 }
 
 const handleSubmit = async () => {
+  const latestMarkdown = markdownEditorRef.value?.getValue?.()
+  if (typeof latestMarkdown === 'string') {
+    form.content_markdown = latestMarkdown
+  }
+
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
