@@ -20,6 +20,18 @@ export function updateArticleStatus(id, status) {
   return request.patch(`/articles/${id}/status`, { status })
 }
 
+export function updateArticlePin(id, isPinned) {
+  return request.patch(`/articles/${id}/pin`, { is_pinned: isPinned })
+}
+
+export function getPinnedArticles() {
+  return request.get('/articles/pinned')
+}
+
+export function reorderPinnedArticles(articleIds) {
+  return request.post('/articles/pinned/reorder', { article_ids: articleIds })
+}
+
 export function deleteArticle(id) {
   return request.delete(`/articles/${id}`)
 }

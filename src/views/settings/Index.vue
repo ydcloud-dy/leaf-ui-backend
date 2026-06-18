@@ -47,6 +47,63 @@
             <el-input v-model="form.contact_email" placeholder="请输入联系邮箱" prefix-icon="Message" />
           </el-form-item>
 
+          <el-form-item label="站点地址">
+            <el-input v-model="form.site_url" placeholder="https://dycloud.fun" prefix-icon="Link" />
+          </el-form-item>
+
+          <el-divider content-position="left">发布邮件通知</el-divider>
+
+          <el-form-item label="邮件通知">
+            <el-switch
+              v-model="form.mail_enabled"
+              active-value="true"
+              inactive-value="false"
+              active-text="开启"
+              inactive-text="关闭"
+            />
+          </el-form-item>
+
+          <el-form-item label="SMTP服务器">
+            <el-input v-model="form.mail_smtp_host" placeholder="smtp.163.com" prefix-icon="Connection" />
+          </el-form-item>
+
+          <el-form-item label="SMTP端口">
+            <el-input v-model="form.mail_smtp_port" placeholder="25" prefix-icon="Switch" />
+          </el-form-item>
+
+          <el-form-item label="SMTP账号">
+            <el-input v-model="form.mail_smtp_username" placeholder="请输入SMTP账号" prefix-icon="User" />
+          </el-form-item>
+
+          <el-form-item label="SMTP密码">
+            <el-input
+              v-model="form.mail_smtp_password"
+              type="password"
+              show-password
+              placeholder="请输入SMTP授权码或密码"
+              prefix-icon="Lock"
+            />
+            <div class="form-tip">建议使用邮箱服务商生成的 SMTP 授权码，不要使用网页登录密码。</div>
+          </el-form-item>
+
+          <el-form-item label="发件邮箱">
+            <el-input v-model="form.mail_smtp_from" placeholder="dycloudlove@163.com" prefix-icon="Message" />
+          </el-form-item>
+
+          <el-form-item label="发件名称">
+            <el-input v-model="form.mail_smtp_from_name" placeholder="运维工程师的技术笔记" prefix-icon="Stamp" />
+          </el-form-item>
+
+          <el-form-item label="SSL连接">
+            <el-switch
+              v-model="form.mail_smtp_use_ssl"
+              active-value="true"
+              inactive-value="false"
+              active-text="使用SSL"
+              inactive-text="不使用"
+            />
+          </el-form-item>
+
           <el-form-item>
             <el-button type="primary" @click="handleSubmit" :loading="submitting">
               <el-icon><Check /></el-icon>
@@ -67,6 +124,16 @@
         <div class="preview-meta">
           <span>{{ form.icp_number || '未填写备案号' }}</span>
           <span>{{ form.contact_email || '未填写联系邮箱' }}</span>
+          <span>{{ form.site_url || '未填写站点地址' }}</span>
+        </div>
+
+        <div class="mail-preview">
+          <h4>发布通知</h4>
+          <span :class="['mail-status', form.mail_enabled === 'true' ? 'is-on' : 'is-off']">
+            {{ form.mail_enabled === 'true' ? '已开启' : '已关闭' }}
+          </span>
+          <p>{{ form.mail_smtp_host || '未配置 SMTP 服务' }}:{{ form.mail_smtp_port || '25' }}</p>
+          <p>{{ form.mail_smtp_from_name || form.mail_smtp_from || '未配置发件人' }}</p>
         </div>
       </aside>
     </div>
@@ -88,7 +155,16 @@ const form = reactive({
   site_logo: '',
   icp_number: '',
   copyright: '',
-  contact_email: ''
+  contact_email: '',
+  site_url: 'https://dycloud.fun',
+  mail_enabled: 'true',
+  mail_smtp_host: 'smtp.163.com',
+  mail_smtp_port: '25',
+  mail_smtp_username: 'dycloudlove@163.com',
+  mail_smtp_password: '',
+  mail_smtp_from: 'dycloudlove@163.com',
+  mail_smtp_from_name: 'dycloudlove@163.com',
+  mail_smtp_use_ssl: 'false'
 })
 
 const fetchSettings = async () => {
@@ -164,5 +240,54 @@ onMounted(() => {
   color: var(--admin-muted);
   font-size: 12px;
   font-weight: 650;
+}
+
+.form-tip {
+  margin-top: 6px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mail-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+}
+
+.mail-preview h4 {
+  margin: 0;
+  color: var(--admin-heading);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.mail-preview p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mail-status {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.mail-status.is-on {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.mail-status.is-off {
+  background: rgba(100, 116, 139, 0.14);
+  color: #64748b;
 }
 </style>

@@ -8,6 +8,10 @@
             <span>管理发布状态、分类标签和批量导入导出</span>
           </div>
           <div class="header-actions">
+            <el-button type="info" @click="openPinnedDialog">
+              <el-icon><Top /></el-icon>
+              置顶管理
+            </el-button>
             <el-button type="success" @click="importDialogVisible = true">
               <el-icon><Upload /></el-icon>
               批量导入
@@ -85,7 +89,10 @@
         <el-table-column label="标题" min-width="240" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="article-title-cell">
-              <strong>{{ row.title }}</strong>
+              <div class="article-title-line">
+                <el-tag v-if="row.is_pinned" size="small" type="danger" effect="dark">置顶</el-tag>
+                <strong>{{ row.title }}</strong>
+              </div>
               <span v-if="row.summary">{{ row.summary }}</span>
             </div>
           </template>
@@ -120,7 +127,7 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="330" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="$router.push(`/articles/${row.id}/edit`)">
               <el-icon><Edit /></el-icon>
@@ -141,6 +148,15 @@
               @click="handleUpdateStatus(row, 2)"
             >
               下架
+            </el-button>
+            <el-button
+              v-if="row.status === 1"
+              size="small"
+              :type="row.is_pinned ? 'info' : 'primary'"
+              plain
+              @click="handleUpdatePin(row, !row.is_pinned)"
+            >
+              {{ row.is_pinned ? '取消置顶' : '置顶' }}
             </el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">
               <el-icon><Delete /></el-icon>
@@ -282,6 +298,50 @@
       </template>
     </el-dialog>
 
+    <!-- 置顶管理对话框 -->
+    <el-dialog v-model="pinnedDialogVisible" title="置顶管理" width="680px" @open="fetchPinnedArticles">
+      <div class="pin-dialog-tip">
+        <span>最多置顶 5 篇文章，拖动卡片可以调整首页展示顺序。</span>
+        <strong>{{ pinnedArticles.length }}/5</strong>
+      </div>
+
+      <div v-loading="pinnedLoading" class="pinned-list">
+        <el-empty v-if="!pinnedLoading && pinnedArticles.length === 0" description="暂无置顶文章" />
+        <div
+          v-for="(article, index) in pinnedArticles"
+          :key="article.id"
+          class="pinned-item"
+          draggable="true"
+          @dragstart="handlePinDragStart(index)"
+          @dragover.prevent
+          @drop="handlePinDrop(index)"
+        >
+          <div class="pin-rank">{{ index + 1 }}</div>
+          <div class="pin-content">
+            <strong>{{ article.title }}</strong>
+            <span>{{ article.category?.name || '未分类' }} · {{ formatDate(article.created_at) }}</span>
+          </div>
+          <div class="pin-actions">
+            <el-button :disabled="index === 0" size="small" text @click="movePinned(index, -1)">上移</el-button>
+            <el-button :disabled="index === pinnedArticles.length - 1" size="small" text @click="movePinned(index, 1)">下移</el-button>
+            <el-button size="small" text type="danger" @click="handleUpdatePin(article, false)">取消</el-button>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="pinnedDialogVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          :loading="pinSaving"
+          :disabled="pinnedArticles.length === 0"
+          @click="savePinnedOrder"
+        >
+          保存排序
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 图片选择器对话框 -->
     <el-dialog v-model="coverSelectorVisible" title="选择图片" width="800px">
       <div style="max-height: 400px; overflow-y: auto">
@@ -307,7 +367,15 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getArticles, updateArticleStatus, deleteArticle, exportArticles } from '@/api/article'
+import {
+  getArticles,
+  updateArticleStatus,
+  updateArticlePin,
+  getPinnedArticles,
+  reorderPinnedArticles,
+  deleteArticle,
+  exportArticles
+} from '@/api/article'
 import { getFiles } from '@/api/file'
 import { getCategories, getTags } from '@/api/taxonomy'
 import { getChapters } from '@/api/chapter'
@@ -336,6 +404,11 @@ const fileList2 = ref([])
 const categories = ref([])
 const tags = ref([])
 const chapters = ref([])
+const pinnedDialogVisible = ref(false)
+const pinnedArticles = ref([])
+const pinnedLoading = ref(false)
+const pinSaving = ref(false)
+const draggingPinnedIndex = ref(null)
 
 const statusMap = {
   0: { label: '草稿', type: 'info' },
@@ -389,6 +462,78 @@ const handleUpdateStatus = async (row, status) => {
   await updateArticleStatus(row.id, status)
   ElMessage.success(`${action}成功`)
   fetchArticles()
+}
+
+const openPinnedDialog = () => {
+  pinnedDialogVisible.value = true
+}
+
+const fetchPinnedArticles = async () => {
+  pinnedLoading.value = true
+  try {
+    const res = await getPinnedArticles()
+    pinnedArticles.value = res.data || []
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '获取置顶文章失败')
+  } finally {
+    pinnedLoading.value = false
+  }
+}
+
+const handleUpdatePin = async (row, isPinned) => {
+  const action = isPinned ? '置顶' : '取消置顶'
+  await ElMessageBox.confirm(`确定要${action}文章 "${row.title}" 吗？`, '提示', {
+    type: isPinned ? 'info' : 'warning'
+  })
+  try {
+    await updateArticlePin(row.id, isPinned)
+    ElMessage.success(`${action}成功`)
+    await fetchArticles()
+    if (pinnedDialogVisible.value) {
+      await fetchPinnedArticles()
+    }
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || `${action}失败`)
+  }
+}
+
+const handlePinDragStart = (index) => {
+  draggingPinnedIndex.value = index
+}
+
+const handlePinDrop = (targetIndex) => {
+  const sourceIndex = draggingPinnedIndex.value
+  draggingPinnedIndex.value = null
+  if (sourceIndex === null || sourceIndex === targetIndex) return
+
+  const next = [...pinnedArticles.value]
+  const [moved] = next.splice(sourceIndex, 1)
+  next.splice(targetIndex, 0, moved)
+  pinnedArticles.value = next
+}
+
+const movePinned = (index, direction) => {
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= pinnedArticles.value.length) return
+
+  const next = [...pinnedArticles.value]
+  const [moved] = next.splice(index, 1)
+  next.splice(targetIndex, 0, moved)
+  pinnedArticles.value = next
+}
+
+const savePinnedOrder = async () => {
+  pinSaving.value = true
+  try {
+    await reorderPinnedArticles(pinnedArticles.value.map(article => article.id))
+    ElMessage.success('置顶排序已保存')
+    await fetchArticles()
+    await fetchPinnedArticles()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '保存置顶排序失败')
+  } finally {
+    pinSaving.value = false
+  }
 }
 
 const handleDelete = async (row) => {
@@ -621,15 +766,10 @@ const handleBatchPublish = async () => {
       }
     )
 
-    // 使用批量更新字段接口,只更新状态
-    const payload = {
-      article_ids: selectedArticles.value.map(a => a.id)
-    }
-
-    // 批量更新状态为已发布
-    for (const article of selectedArticles.value) {
-      await request.patch(`/articles/${article.id}/status`, { status: 1 })
-    }
+    await request.post('/articles/batch-update-fields', {
+      article_ids: selectedArticles.value.map(a => a.id),
+      status: 1
+    })
 
     ElMessage.success(`成功上架 ${selectedArticles.value.length} 篇文章`)
     selectedArticles.value = []
@@ -658,10 +798,10 @@ const handleBatchOffline = async () => {
       }
     )
 
-    // 批量更新状态为已下架
-    for (const article of selectedArticles.value) {
-      await request.patch(`/articles/${article.id}/status`, { status: 2 })
-    }
+    await request.post('/articles/batch-update-fields', {
+      article_ids: selectedArticles.value.map(a => a.id),
+      status: 2
+    })
 
     ElMessage.success(`成功下架 ${selectedArticles.value.length} 篇文章`)
     selectedArticles.value = []
@@ -743,7 +883,14 @@ onMounted(() => {
   min-width: 0;
 }
 
-.article-title-cell strong {
+.article-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-title-line strong {
   min-width: 0;
   overflow: hidden;
   color: var(--admin-heading);
@@ -765,6 +912,89 @@ onMounted(() => {
 .tag-list {
   display: flex;
   flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pin-dialog-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: #f8fafc;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.pin-dialog-tip strong {
+  color: var(--admin-heading);
+  font-size: 16px;
+}
+
+.pinned-list {
+  display: grid;
+  max-height: 420px;
+  overflow-y: auto;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.pinned-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: #fff;
+  cursor: grab;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pinned-item:hover {
+  border-color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.pin-rank {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: var(--admin-primary);
+  font-weight: 800;
+}
+
+.pin-content {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.pin-content strong {
+  overflow: hidden;
+  color: var(--admin-heading);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pin-content span {
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+
+.pin-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
   gap: 4px;
 }
 
